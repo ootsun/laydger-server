@@ -8,6 +8,7 @@ import {ProductEntity} from '../models/entities/product.entity';
 import {InitDLayPayPaymentDto} from '../models/dtos/init-dlay-pay-payment.dto';
 import {PaymentStatus} from '../models/payment-status.enum';
 import {UpdatePaymentCommand} from '../models/commands/update-payment.command';
+import {zkSyncProvider} from '../services/ethereum/zksync-provider';
 
 @Service()
 export class PaymentsController {
@@ -15,7 +16,7 @@ export class PaymentsController {
     private readonly provider: Provider;
 
     constructor() {
-        this.provider = Container.get(Provider);
+        this.provider = Container.get(zkSyncProvider).getProvider();
     }
 
     async createPayment(command: CreatePaymentCommand): Promise<string> {
