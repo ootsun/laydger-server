@@ -9,6 +9,8 @@ import {InitDLayPayPaymentDto} from '../models/dtos/init-dlay-pay-payment.dto';
 import {PaymentStatus} from '../models/payment-status.enum';
 import {UpdatePaymentCommand} from '../models/commands/update-payment.command';
 import {zkSyncProvider} from '../services/ethereum/zksync-provider';
+import {PaymentDto} from '../models/dtos/payment.dto';
+import {ProductDto} from '../models/dtos/product.dto';
 
 @Service()
 export class PaymentsController {
@@ -17,6 +19,29 @@ export class PaymentsController {
 
     constructor() {
         this.provider = Container.get(zkSyncProvider).getProvider();
+    }
+
+    async getPayment(paymentId: string): Promise<PaymentDto> {
+        const payment = await PaymentEntity.findById(paymentId)
+            .populate('product', '_id name description imageUrl amountInWei');
+        if(!payment) {
+            throw new Error('Payment not found');
+        }
+
+        const productDto = new ProductDto(
+            payment.product._id.toString(),
+            payment.product.name,
+            payment.product.description,
+            payment.product.imageUrl,
+            payment.product.amountInWei,
+        )
+
+        return new PaymentDto(
+            payment._id.toString(),
+            payment.deliveryAddress,
+            productDto,
+            payment.status
+        )
     }
 
     async createPayment(command: CreatePaymentCommand): Promise<string> {
@@ -28,7 +53,7 @@ export class PaymentsController {
         const payment = new PaymentEntity({
             deliveryAddress: command.deliveryAddress,
             product: product,
-            bumpedAmount: product.amountInWei
+            amountInWei: product.amountInWei
         });
         await payment.save();
 
@@ -40,19 +65,20 @@ export class PaymentsController {
         return redirectUrl;
     }
 
-    async updatePayment(command: UpdatePaymentCommand) {
-        const payment = await PaymentEntity.findById(command.paymentId);
+    async updatePayment(paymentId: string, command: UpdatePaymentCommand) {
+        const payment = await PaymentEntity.findById(paymentId);
         if(!payment) {
             throw new Error('Payment not found');
         }
 
-        if(!await this.transactionIsValid(command.zkSyncTransactionHash, payment)) {
+        // command.zkSyncTransactionHash is null in simulation mode
+        if(command.zkSyncTransactionHash && !await this.transactionIsValid(command.zkSyncTransactionHash, payment)) {
             throw new Error('Transaction is invalid');
         }
 
-        await PaymentEntity.updateOne({_id: command.paymentId}, {status: command.status});
+        await PaymentEntity.updateOne({_id: paymentId}, {status: command.status});
 
-        return this.generateRedirectUrl(command.paymentId);
+        return this.generateRedirectUrl(paymentId);
     }
 
     private async initDLayPayPayment(payment: Payment): Promise<string> {
