@@ -2,7 +2,7 @@ import {Provider} from 'zksync-web3';
 import {Service} from 'typedi';
 
 @Service()
-export class zkSyncProvider {
+export class ZkSyncProvider {
 
   private readonly provider: Provider;
 

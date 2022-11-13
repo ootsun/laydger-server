@@ -8,7 +8,7 @@ import {ProductEntity} from '../models/entities/product.entity';
 import {InitDLayPayPaymentDto} from '../models/dtos/init-dlay-pay-payment.dto';
 import {PaymentStatus} from '../models/payment-status.enum';
 import {UpdatePaymentCommand} from '../models/commands/update-payment.command';
-import {zkSyncProvider} from '../services/ethereum/zksync-provider';
+import {ZkSyncProvider} from '../services/ethereum/zksync-provider';
 import {PaymentDto} from '../models/dtos/payment.dto';
 import {ProductDto} from '../models/dtos/product.dto';
 
@@ -18,7 +18,7 @@ export class PaymentsController {
     private readonly provider: Provider;
 
     constructor() {
-        this.provider = Container.get(zkSyncProvider).getProvider();
+        this.provider = Container.get(ZkSyncProvider).getProvider();
     }
 
     async getPayment(paymentId: string): Promise<PaymentDto> {
@@ -133,8 +133,7 @@ export class PaymentsController {
         }
         const DLAY_PAY_FEE_IN_PERCENTAGE = Number.parseFloat(process.env.DLAY_PAY_FEE_IN_PERCENTAGE);
         const expectedAmount = BigNumber.from(payment.amountInWei)
-            .mul(100 - DLAY_PAY_FEE_IN_PERCENTAGE)
-            .div(100);
+            .mul(100 - DLAY_PAY_FEE_IN_PERCENTAGE);
         const transaction = await this.provider.getTransaction(transactionHash);
         const transactionValue = transaction.value;
         return transactionValue.gte(expectedAmount);
